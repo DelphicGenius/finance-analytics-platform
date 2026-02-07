@@ -23,22 +23,26 @@ chart_type = st.selectbox(
     ["Line Chart", "Candlestick Chart"]
 )
 
-# Load data
+# Load stock + NIFTY data
 @st.cache_data(ttl=300)
-def load_data(ticker):
-    df = yf.download(ticker, period="1y", auto_adjust=False)
-    return df
+def load_data(stock):
+    stock_df = yf.download(stock, period="1y", auto_adjust=False)
+    nifty_df = yf.download("^NSEI", period="1y", auto_adjust=False)
+    return stock_df, nifty_df
 
-data = load_data(ticker)
+data, nifty = load_data(ticker)
 
 # Check data
-if data.empty:
-    st.error("No data found.")
+if data.empty or nifty.empty:
+    st.error("Data not available.")
     st.stop()
 
 # Fix multi-columns
 if isinstance(data.columns, pd.MultiIndex):
     data.columns = data.columns.get_level_values(0)
+
+if isinstance(nifty.columns, pd.MultiIndex):
+    nifty.columns = nifty.columns.get_level_values(0)
 
 # -----------------------
 # INDICATORS
@@ -60,44 +64,57 @@ rs = avg_gain / avg_loss
 data["RSI"] = 100 - (100 / (1 + rs))
 
 # -----------------------
-# RETURNS & RISK (NEW)
+# RETURNS
 # -----------------------
 
-# Daily Return
-data["Daily_Return"] = data["Close"].pct_change()
+# Stock returns
+data["Return\db"] = data["Close"].pct_change()
+data["Return"] = data["Close"].pct_change()
+data["CumReturn"] = (1 + data["Return"]).cumprod()
 
-# Cumulative Return
-data["Cumulative_Return"] = (1 + data["Daily_Return"]).cumprod() - 1
-
-# Volatility (Annualized Risk)
-volatility = data["Daily_Return"].std() * np.sqrt(252)
-
-# Total Return (1 year)
-total_return = data["Cumulative_Return"].iloc[-1] * 100
+# NIFTY returns
+nifty["Return"] = nifty["Close"].pct_change()
+nifty["CumReturn"] = (1 + nifty["Return"]).cumprod()
 
 # -----------------------
-# LATEST PRICE
+# BETA CALCULATION
 # -----------------------
 
-latest_price = float(data["Close"].iloc[-1])
+merged = pd.concat(
+    [data["Return"], nifty["Return"]],
+    axis=1
+)
+
+merged.columns = ["Stock", "Market"]
+merged = merged.dropna()
+
+cov = np.cov(merged["Stock"], merged["Market"])[0][1]
+var = np.var(merged["Market"])
+
+beta = cov / var
 
 # -----------------------
 # METRICS
 # -----------------------
 
-st.subheader("Key Performance Metrics")
+latest_price = float(data["Close"].iloc[-1])
+total_return = (data["CumReturn"].iloc[-1] - 1) * 100
+volatility = data["Return"].std() * np.sqrt(252)
 
-c1, c2, c3 = st.columns(3)
+st.subheader("Key Metrics")
+
+c1, c2, c3, c4 = st.columns(4)
 
 c1.metric("Latest Price", f"₹ {latest_price:.2f}")
 c2.metric("1Y Return", f"{total_return:.2f}%")
-c3.metric("Volatility (Risk)", f"{volatility*100:.2f}%")
+c3.metric("Volatility", f"{volatility*100:.2f}%")
+c4.metric("Beta vs NIFTY", f"{beta:.2f}")
 
 # -----------------------
 # PRICE CHART
 # -----------------------
 
-st.subheader("Price Chart (1 Year)")
+st.subheader("Price Chart")
 
 if chart_type == "Line Chart":
 
@@ -123,8 +140,7 @@ else:
         go.Scatter(
             x=data.index,
             y=data["MA20"],
-            name="MA20",
-            line=dict(color="blue")
+            name="MA20"
         )
     )
 
@@ -132,8 +148,7 @@ else:
         go.Scatter(
             x=data.index,
             y=data["MA50"],
-            name="MA50",
-            line=dict(color="orange")
+            name="MA50"
         )
     )
 
@@ -145,22 +160,27 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------
-# RETURNS CHART
+# BENCHMARK COMPARISON
 # -----------------------
 
-st.subheader("Cumulative Return (Growth of ₹1)")
+st.subheader("Stock vs NIFTY (Growth of ₹1)")
 
-st.line_chart(data[["Cumulative_Return"]])
+compare_df = pd.DataFrame({
+    "Stock": data["CumReturn"],
+    "NIFTY": nifty["CumReturn"]
+})
+
+st.line_chart(compare_df)
 
 # -----------------------
-# RSI CHART
+# RSI
 # -----------------------
 
 st.subheader("RSI Indicator")
 
 st.line_chart(data[["RSI"]])
 
-st.caption("RSI > 70 = Overbought | RSI < 30 = Oversold")
+st.caption("Beta > 1 = More risky than market | Beta < 1 = Less risky")
 
 # -----------------------
 # RAW DATA
