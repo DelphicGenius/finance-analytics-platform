@@ -17,7 +17,10 @@ stocks = [
 ]
 
 # Tabs
-tab1, tab2 = st.tabs(["📈 Individual Stock", "💼 Portfolio"])
+tab1, tab2, tab3 = st.tabs(
+    ["📈 Individual Stock", "💼 Portfolio", "📊 DCF Valuation"]
+)
+
 
 # ===============================
 # DATA LOADER
@@ -249,3 +252,115 @@ with tab2:
     st.subheader("Portfolio Growth (₹1)")
 
     st.line_chart(portfolio_cum)
+
+    # ==================================================
+# TAB 3: DCF VALUATION
+# ==================================================
+
+with tab3:
+
+    st.header("DCF Valuation Model")
+
+    st.write("Estimate intrinsic value using Discounted Cash Flow")
+
+    # -----------------------
+    # INPUTS
+    # -----------------------
+
+    st.subheader("Input Assumptions")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        fcf0 = st.number_input(
+            "Latest Free Cash Flow (₹ Cr)",
+            value=1000.0,
+            step=50.0
+        )
+
+        wacc = st.number_input(
+            "WACC (Cost of Capital, %)",
+            value=12.0
+        ) / 100
+
+    with col2:
+        terminal_growth = st.number_input(
+            "Terminal Growth (%)",
+            value=4.0
+        ) / 100
+
+        shares = st.number_input(
+            "Shares Outstanding (Cr)",
+            value=100.0
+        )
+
+    st.divider()
+
+    st.subheader("Growth Assumptions (Next 5 Years)")
+
+    growth_rates = []
+
+    for i in range(5):
+        g = st.number_input(
+            f"Year {i+1} Growth (%)",
+            value=10.0 - i,
+            key=f"g{i}"
+        ) / 100
+
+        growth_rates.append(g)
+
+    # -----------------------
+    # DCF CALCULATION
+    # -----------------------
+
+    if st.button("Run DCF Valuation"):
+
+        # Project FCFs
+        fcfs = []
+        f = fcf0
+
+        for g in growth_rates:
+            f = f * (1 + g)
+            fcfs.append(f)
+
+        # Discount FCFs
+        pv_fcfs = 0
+
+        for i in range(len(fcfs)):
+            pv = fcfs[i] / ((1 + wacc) ** (i + 1))
+            pv_fcfs += pv
+
+        # Terminal Value (Gordon Model)
+        terminal_value = (
+            fcfs[-1] * (1 + terminal_growth)
+        ) / (wacc - terminal_growth)
+
+        pv_terminal = terminal_value / ((1 + wacc) ** 5)
+
+        # Enterprise Value
+        enterprise_value = pv_fcfs + pv_terminal
+
+        # Per Share Value
+        intrinsic_price = enterprise_value / shares
+
+        # -----------------------
+        # OUTPUT
+        # -----------------------
+
+        st.divider()
+        st.subheader("DCF Result")
+
+        c1, c2, c3 = st.columns(3)
+
+        c1.metric("PV of FCF (₹ Cr)", f"{pv_fcfs:,.0f}")
+        c2.metric("PV of Terminal (₹ Cr)", f"{pv_terminal:,.0f}")
+        c3.metric("Enterprise Value (₹ Cr)", f"{enterprise_value:,.0f}")
+
+        st.success(
+            f"📌 Intrinsic Value per Share ≈ ₹ {intrinsic_price:,.2f}"
+        )
+
+        st.caption(
+            "Note: This is an estimate based on assumptions."
+        )
+
