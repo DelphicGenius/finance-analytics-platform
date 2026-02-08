@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from scipy.optimize import minimize
+from fpdf import FPDF
+
 
 # Page setup
 st.set_page_config(page_title="Finance Dashboard", layout="wide")
@@ -148,6 +150,47 @@ with tab1:
 
     st.caption("RSI > 70 = Overbought | RSI < 30 = Oversold")
 
+    # -----------------------
+# EXPORT (CSV + PDF)
+# -----------------------
+
+st.subheader("Download Report")
+
+# CSV Export
+csv = data.to_csv().encode("utf-8")
+
+st.download_button(
+    "Download Stock Data (CSV)",
+    csv,
+    file_name=f"{ticker}_data.csv",
+    mime="text/csv"
+)
+
+# PDF Export
+if st.button("Download Summary (PDF)"):
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    pdf.cell(200, 10, txt="Stock Analysis Report", ln=True, align="C")
+    pdf.ln(10)
+
+    pdf.cell(200, 10, txt=f"Stock: {ticker}", ln=True)
+    pdf.cell(200, 10, txt=f"Latest Price: ₹ {latest_price:.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"Volatility: {vol*100:.2f}%", ln=True)
+
+    pdf.output("stock_report.pdf")
+
+    with open("stock_report.pdf", "rb") as f:
+        st.download_button(
+            "Click to Download PDF",
+            f,
+            file_name="stock_report.pdf",
+            mime="application/pdf"
+        )
+
+
 
 # ==================================================
 # TAB 2: PORTFOLIO (SMART)
@@ -252,6 +295,57 @@ with tab2:
     st.subheader("Portfolio Growth (₹1)")
 
     st.line_chart(portfolio_cum)
+
+    # -----------------------
+# EXPORT PORTFOLIO
+# -----------------------
+
+st.subheader("Download Portfolio Report")
+
+# CSV
+portfolio_csv = wdf.to_csv().encode("utf-8")
+
+st.download_button(
+    "Download Weights (CSV)",
+    portfolio_csv,
+    file_name="portfolio_weights.csv",
+    mime="text/csv"
+)
+
+# PDF
+if st.button("Download Portfolio PDF"):
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    pdf.cell(200, 10, txt="Portfolio Report", ln=True, align="C")
+    pdf.ln(10)
+
+    pdf.cell(200, 10, txt=f"Return: {ret*100:.2f}%", ln=True)
+    pdf.cell(200, 10, txt=f"Risk: {vol*100:.2f}%", ln=True)
+    pdf.cell(200, 10, txt=f"Sharpe: {sharpe:.2f}", ln=True)
+
+    pdf.ln(10)
+    pdf.cell(200, 10, txt="Weights:", ln=True)
+
+    for i in range(len(wdf)):
+        pdf.cell(
+            200, 10,
+            txt=f"{wdf.iloc[i]['Stock']}: {wdf.iloc[i]['Weight %']:.2f}%",
+            ln=True
+        )
+
+    pdf.output("portfolio_report.pdf")
+
+    with open("portfolio_report.pdf", "rb") as f:
+        st.download_button(
+            "Click to Download Portfolio PDF",
+            f,
+            file_name="portfolio_report.pdf",
+            mime="application/pdf"
+        )
+
 
     # ==================================================
 # TAB 3: DCF VALUATION
