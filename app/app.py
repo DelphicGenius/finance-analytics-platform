@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from scipy.optimize import minimize
 from fpdf import FPDF
 
+st.markdown("### 📊 End-to-End Finance Analytics Platform")
 
 # Page setup
 st.set_page_config(page_title="Finance Dashboard", layout="wide")
