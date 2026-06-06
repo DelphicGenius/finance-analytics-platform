@@ -1,18 +1,52 @@
-🔹 Project Title
-Finance Analytics Platform
+# Finance Analytics Platform
 
-🔹 Features
-Live stock analysis (MA, RSI, Candles)
+An end-to-end finance analytics dashboard built using Python and Streamlit.
 
-Portfolio optimization (Sharpe)
+## Features
 
-DCF valuation
+### Stock Analysis
 
-PDF/CSV reports
+- Live stock data using Yahoo Finance
+- Candlestick charts
+- Moving Averages (20 DMA & 50 DMA)
+- RSI Indicator
+- Volatility Analysis
 
-🔹 Tech Stack
-Python, Streamlit, yFinance, Plotly, SciPy
+### Portfolio Optimization
 
-🔹 How to Run
+- Modern Portfolio Theory
+- Sharpe Ratio Maximization
+- Optimal Portfolio Weights
+- Efficient Frontier Visualization
+
+### Valuation Models
+
+- Discounted Cash Flow (DCF)
+- Dividend Discount Model (DDM)
+- Sensitivity Analysis
+
+### Reporting
+
+- CSV Export
+- PDF Report Generation
+
+---
+
+## Tech Stack
+
+- Python
+- Streamlit
+- Pandas
+- NumPy
+- Plotly
+- SciPy
+- Yahoo Finance API
+
+---
+
+## Installation
+
+```bash
 pip install -r requirements.txt
 streamlit run app/app.py
+```
